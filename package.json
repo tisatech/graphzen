@@ -1,0 +1,21 @@
+{
+  "name": "graphzen",
+  "version": "0.0.1",
+  "description": "Organization Manager",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon ./dist/index.js",
+    "test": "echo no test yet"
+  },
+  "author": "Justine Che T. Romero",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^4.0.1",
+    "dotenv": "^8.2.0",
+    "mongoose": "^5.9.12"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^3.0.0",
+    "@types/mongoose": "^5.7.15"
+  }
+}
