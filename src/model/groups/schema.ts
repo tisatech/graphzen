@@ -2,6 +2,7 @@ import { Schema, Document } from "mongoose";
 import { MemberModel } from "../members";
 import { ClearanceModel } from "../clearances";
 import { UserModel } from "../users/index";
+import { GroupMethods } from "./methods";
 
 export const GroupSchema = new Schema({
   name: String,
@@ -11,6 +12,9 @@ export const GroupSchema = new Schema({
   clearances: [{ type: Schema.Types.ObjectId, ref: "Clearance" }],
   subgroups: [{ type: Schema.Types.ObjectId, ref: "Group" }],
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+
+  parentGroup: { type: Schema.Types.ObjectId, ref: "Group" },
+  parentUser: { type: Schema.Types.ObjectId, ref: "User" },
 });
 
 interface BaseSchema {
@@ -29,7 +33,7 @@ export interface GroupSchema extends BaseSchema {
   parentGroup: string;
 }
 
-interface GroupModel extends GroupSchema, Document {}
+interface GroupModel extends GroupSchema, Document, GroupMethods {}
 export interface GroupSchemaPopulated extends BaseSchema {
   members: MemberModel[];
   clearances: ClearanceModel[];

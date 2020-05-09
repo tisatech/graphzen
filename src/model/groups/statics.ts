@@ -1,10 +1,15 @@
 import { Model, Document } from "mongoose";
-import { GroupSchema } from "./schema";
+import { GroupSchema, GroupSchemaPopulated } from "./schema";
 import { IDNotFoundError } from "../../lib/errors";
 import { UserModel } from "../users";
 import { GroupMethods } from "./methods";
+import { Member } from "../members";
 
 interface GroupModel extends GroupSchema, Document, GroupMethods {}
+interface GroupModelPopulated
+  extends GroupSchemaPopulated,
+    Document,
+    GroupMethods {}
 interface GroupEntity extends GroupStatics, Model<GroupModel> {}
 
 export interface GroupStatics {
@@ -37,7 +42,7 @@ interface IUpdateGroupPayload {
  * @param payload.description - The description of the Group.
  * @param payload.createdBy - The user who created the group.
  * @param payload.parentGroup - The group in which this group is created.
- * @returns Promise<GroupModel>
+ * @returns the newly created group.
  */
 GroupSchema.statics.createGroup = async function createGroup(
   this: GroupEntity,
@@ -54,32 +59,18 @@ GroupSchema.statics.createGroup = async function createGroup(
     group.parentGroup = parentGroup;
   } else group.parentUser = createdBy;
 
-  await group.save();
+  return await group.save();
 };
 
 /**
  * Get Group
  * @param _id - ID of the Group.
  *
- * @returns Promise<GroupModel>
- * @throws IDNotFoundError
- */
-GroupSchema.statics.getGroup = async function getGroup(
-  this: GroupEntity,
-  _id: string
-) {
-  const Group = await this.findById(_id).exec();
-  if (!Group) throw new IDNotFoundError("Group ID not found.");
-  return Group;
-};
-
-/**
- * Update a Group
+ * @returns The group.
  * @param _id - ID of the Group.
  * @param payload.name - The name of the Group.
  * @param payload.description - The description of the Group.
  *
- * @returns Promise<void>
  * @throws IDNotFoundError
  */
 GroupSchema.statics.updateGroup = async function updateGroup(
@@ -101,7 +92,6 @@ GroupSchema.statics.updateGroup = async function updateGroup(
  * Delete a Group
  * @param _id - ID of the Group.
  *
- * @returns Promise<void>
  * @throws IDNotFoundError
  */
 GroupSchema.statics.deleteGroup = async function deleteGroup(
@@ -112,13 +102,25 @@ GroupSchema.statics.deleteGroup = async function deleteGroup(
   if (!group) throw new IDNotFoundError("Can not delete group.");
 
   // disconnect members of the group.
-  // -- TODO
-
-  //delete subgroups;
-  const promises = group.subgroups.map(async (groupID) => {
-    await group.removeGroup(groupID);
+  const memberPromises = group.members.map(async (_id) => {
+    await Member.deleteMember(_id, group._id.toString());
   });
+  await Promise.all(memberPromises);
+
+  //delete perform BFS and delete all
+  const queue: GroupModel[] = [group];
+  const promises: Promise<GroupModel>[] = [];
+  while (!queue.length) {
+    const group = queue.shift();
+    if (!group) break; // this will not happen.
+
+    const populatedGroup: GroupModelPopulated = (await group
+      .populate("subgroups")
+      .execPopulate()) as any;
+    const groups: GroupModel[] = populatedGroup.subgroups;
+    queue.push(...groups);
+    promises.push(group.remove());
+  }
 
   await Promise.all(promises);
-  await group.remove();
 };

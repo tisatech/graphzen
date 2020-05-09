@@ -2,8 +2,9 @@ import { Model, Document } from "mongoose";
 import { UserSchema } from "./schema";
 import { IDNotFoundError } from "../../lib/errors";
 import { Group } from "../groups";
+import { UserMethods } from "./methods";
 
-interface UserModel extends UserSchema, Document {}
+interface UserModel extends UserSchema, Document, UserMethods {}
 interface UserEntity extends UserStatics, Model<UserModel> {}
 
 export interface UserStatics {
@@ -36,7 +37,7 @@ interface IUpdateUserPayload {
  * @param payload.email - The email of the user.
  * @param payload.password - The password of the user.
  *
- * @returns Promise<UserModel>
+ * @returns the newly created user.
  */
 UserSchema.statics.createUser = async function createUser(
   this: UserEntity,
@@ -54,7 +55,7 @@ UserSchema.statics.createUser = async function createUser(
  * Get user
  * @param _id - ID of the user.
  *
- * @returns Promise<UserModel>
+ * @returns the requested user.
  * @throws IDNotFoundError
  */
 UserSchema.statics.getUser = async function getUser(
@@ -62,7 +63,7 @@ UserSchema.statics.getUser = async function getUser(
   _id: string
 ) {
   const user = await this.findById(_id).exec();
-  if (!user) throw new IDNotFoundError("User ID not found.");
+  if (!user) throw new IDNotFoundError("Cannot get User.");
   return user;
 };
 
@@ -73,7 +74,6 @@ UserSchema.statics.getUser = async function getUser(
  * @param payload.email - The email of the user.
  * @param payload.password - The password of the user.
  *
- * @returns Promise<void>
  * @throws IDNotFoundError
  */
 UserSchema.statics.updateUser = async function updateUser(
@@ -95,7 +95,6 @@ UserSchema.statics.updateUser = async function updateUser(
  * Delete a user, turn memberships into shadow members, and delete created groups.
  * @param _id - ID of the user.
  *
- * @returns Promise<void>
  * @throws IDNotFoundError
  */
 UserSchema.statics.deleteUser = async function deleteUser(
@@ -106,13 +105,16 @@ UserSchema.statics.deleteUser = async function deleteUser(
   if (!user) throw new IDNotFoundError("Can not delete user.");
 
   // Delete created groups.
-  const promises = user.owned_groups.map(async (groupID) => {
+  const promisesGroups = user.owned_groups.map(async (groupID) => {
     await Group.deleteGroup(groupID);
   });
-  await Promise.all(promises);
+  await Promise.all(promisesGroups);
 
   // Turn memberships into shadow accounts.
-  // --todo
-
+  const members = await user.getMembers();
+  const promisesMembers = members.map(async (member) => {
+    await member.unassignUser();
+  });
+  await Promise.all(promisesMembers);
   await user.remove();
 };

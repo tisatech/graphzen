@@ -4,5 +4,8 @@ import { Document, Model } from "mongoose";
 import { GroupMethods } from "./methods";
 
 export interface GroupModel extends GroupSchema, GroupMethods, Document {}
-export interface GroupModelPopulated extends GroupSchemaPopulated, Document {}
+export interface GroupModelPopulated
+  extends GroupSchemaPopulated,
+    GroupMethods,
+    Document {}
 export interface GroupEntity extends Model<GroupModel>, GroupStatics {}
