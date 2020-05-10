@@ -9,7 +9,6 @@ describe("# removeMember", () => {
     let shadowMember: MemberModel;
 
     let group: GroupModel;
-    let groupsRemoved: string[] = [];
     before(async () => {
       const user = await User.createUser({
         name: "Sample User",
@@ -32,43 +31,49 @@ describe("# removeMember", () => {
     });
 
     it("should not throw when removing a non-shadow member", async () => {
-      groupsRemoved = await group.removeMember(member._id.toString());
+      await group.removeMember(member._id.toString());
     });
 
-    it("should process the right groups.", () => {
-      expect(groupsRemoved.length).to.be.equal(1);
-      expect(groupsRemoved[0]).to.be.equal(group._id.toString());
-    });
-
-    it("should remove the group member", () => {
-      expect(group.members.length).to.be.equal(1);
-      expect(group.members[0].toString()).to.be.equal(
+    it("should remove the group member from the group", async () => {
+      const groupDB = await Group.findById(group._id).exec();
+      expect(groupDB).to.exist;
+      expect(groupDB?.members.length).to.be.equal(1);
+      expect(groupDB?.members[0].toString()).to.be.equal(
         shadowMember._id.toString()
       );
     });
 
+    it("the member should be removed from the database.", async () => {
+      const memberDB = await Member.findById(member._id).exec();
+      expect(memberDB).to.not.exist;
+    });
+
     it("should not throw when removing a shadow member", async () => {
-      groupsRemoved = await group.removeMember(shadowMember._id.toString());
+      await group.removeMember(shadowMember._id.toString());
     });
 
-    it("should remove the shadow member from the group.", () => {
-      expect(group.members.length).to.be.equal(0);
+    it("should remove the shadow member from the group.", async () => {
+      const groupDB = await Group.findById(group._id).exec();
+      expect(groupDB).to.exist;
+      expect(groupDB?.members.length).to.be.equal(0);
     });
 
-    it("should process the right groups", () => {
-      expect(groupsRemoved.length).to.be.equal(1);
-      expect(groupsRemoved[0]).to.be.equal(group._id.toString());
+    it("the shadow member should be removed from the database.", async () => {
+      const memberDB = await Member.findById(shadowMember._id).exec();
+      expect(memberDB).to.not.exist;
     });
 
-    afterEach(async () => {
+    after(async () => {
       await Member.deleteMany({});
       await Group.deleteMany({});
       await User.deleteMany({});
     });
   });
-  describe("Tree with roots", () => {
+  describe("Tree with roots with non-shadow member", () => {
     let member: MemberModel;
+    let root: GroupModel;
     let group: GroupModel;
+    let subgroup: GroupModel;
 
     before(async () => {
       const user = await User.createUser({
@@ -77,7 +82,7 @@ describe("# removeMember", () => {
         password: "password",
       });
 
-      const root = await Group.createGroup({
+      root = await Group.createGroup({
         name: "Sample Group",
         description: "Sample group",
         createdBy: user._id.toString(),
@@ -86,17 +91,108 @@ describe("# removeMember", () => {
       await root.addMember(user);
 
       group = await root.addGroup({
-        name: "Leaf Group",
-        description: "Sample leaf",
+        name: "Middle Group",
+        description: "Sample Middle",
         createdBy: user._id.toString(),
       });
 
-      member = await group.addMember(user);
+      await group.addMember(user);
+
+      subgroup = await group.addGroup({
+        name: "Leaf Group",
+        description: "Sample Leaf",
+        createdBy: user._id.toString(),
+      });
+      member = await subgroup.addMember(user);
     });
 
-    it("", () => {});
+    it("should not throw when removing a non-shadow member", async () => {
+      await group.removeMember(member._id.toString());
+    });
 
-    afterEach(async () => {
+    it("should remove the group member from the middle node", async () => {
+      const groupDB = await Group.findById(subgroup._id).exec();
+      expect(groupDB).to.exist;
+      expect(groupDB?.members.length).to.be.equal(0);
+    });
+    it("should remove the group member from the leaf node", async () => {
+      const groupDB = await Group.findById(subgroup._id).exec();
+      expect(groupDB).to.exist;
+      expect(groupDB?.members.length).to.be.equal(0);
+    });
+
+    it("should remove the group from the member object", async () => {
+      const memberDB = await Member.findById(member._id).exec();
+      expect(memberDB?.groups.length).to.be.equal(1);
+      expect(memberDB?.groups[0].group.toString()).to.be.equal(
+        root._id.toString()
+      );
+    });
+
+    after(async () => {
+      await Member.deleteMany({});
+      await Group.deleteMany({});
+      await User.deleteMany({});
+    });
+  });
+  describe("Tree with roots with shadow member", () => {
+    let member: MemberModel;
+    let root: GroupModel;
+    let group: GroupModel;
+    let subgroup: GroupModel;
+
+    before(async () => {
+      const user = await User.createUser({
+        name: "Sample User",
+        email: "email@email.com",
+        password: "password",
+      });
+
+      root = await Group.createGroup({
+        name: "Sample Group",
+        description: "Sample group",
+        createdBy: user._id.toString(),
+      });
+
+      await root.addMember();
+
+      group = await root.addGroup({
+        name: "Middle Group",
+        description: "Sample Middle",
+        createdBy: user._id.toString(),
+      });
+
+      member = await group.addMember();
+
+      subgroup = await group.addGroup({
+        name: "Leaf Group",
+        description: "Sample Leaf",
+        createdBy: user._id.toString(),
+      });
+      await subgroup.addMember();
+    });
+
+    it("should not throw when removing a shadow member", async () => {
+      await group.removeMember(member._id.toString());
+    });
+
+    it("should not remove the group member from the middle node", async () => {
+      const groupDB = await Group.findById(subgroup._id).exec();
+      expect(groupDB).to.exist;
+      expect(groupDB?.members.length).to.be.equal(1);
+    });
+    it("should not remove the group member from the leaf node", async () => {
+      const groupDB = await Group.findById(subgroup._id).exec();
+      expect(groupDB).to.exist;
+      expect(groupDB?.members.length).to.be.equal(1);
+    });
+
+    it("should remove the member object from the database", async () => {
+      const memberDB = await Member.findById(member._id).exec();
+      expect(memberDB).to.not.exist;
+    });
+
+    after(async () => {
       await Member.deleteMany({});
       await Group.deleteMany({});
       await User.deleteMany({});

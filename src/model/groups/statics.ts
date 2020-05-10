@@ -3,7 +3,7 @@ import { GroupSchema, GroupSchemaPopulated } from "./schema";
 import { IDNotFoundError } from "../../lib/errors";
 import { UserModel } from "../users";
 import { GroupMethods } from "./methods";
-import { Member } from "../members";
+import { Member, MemberModel } from "../members";
 import { Group } from ".";
 
 interface GroupModel extends GroupSchema, Document, GroupMethods {}
@@ -113,11 +113,9 @@ GroupSchema.statics.deleteGroup = async function deleteGroup(
   const group = await this.findById(_id).exec();
   if (!group) throw new IDNotFoundError("Can not delete group.");
 
-  // disconnect members of the group.
-  const memberPromises = group.members.map(async (_id) => {
-    await Member.deleteMember(_id, group._id.toString());
-  });
-  await Promise.all(memberPromises);
+  const memberIDs: string[] = [];
+  const groupIDs: string[] = [];
+
   //delete perform BFS and delete all
   const queue: GroupModel[] = [group];
   const promises: Promise<GroupModel>[] = [];
@@ -125,13 +123,36 @@ GroupSchema.statics.deleteGroup = async function deleteGroup(
     const group = queue.shift();
     if (!group) break; // this will not happen.
 
+    groupIDs.push(group._id.toString());
+    group.members.forEach((id) => {
+      const strID = id.toString();
+      if (!memberIDs.includes(strID)) memberIDs.push(strID);
+    });
+
     const populatedGroup: GroupModelPopulated = (await group
       .populate("subgroups")
       .execPopulate()) as any;
+
     const groups: GroupModel[] = populatedGroup.subgroups;
     queue.push(...groups);
-    promises.push(group.remove());
+
+    // TODO: parallelize this
+    await group.remove();
   }
 
-  await Promise.all(promises);
+  // TODO: parallelize this
+  for (let _id of memberIDs) {
+    const member = await Member.getMember(_id.toString());
+    // member.groups.length = 0;
+    // member.groups.push(
+    //   ...member.groups.filter(
+    //     (groupItem) => !groupIDs.includes(groupItem.group.toString())
+    //     )
+    //     );
+    member.groups = member.groups.filter(
+      (groupItem) => !groupIDs.includes(groupItem.group.toString())
+    );
+    if (member.groups.length == 0) await member.remove();
+    else await member.save();
+  }
 };

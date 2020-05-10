@@ -42,7 +42,7 @@ describe("# addMember", () => {
       expect(group.members[0].toString()).to.be.equal(member._id.toString());
     });
 
-    afterEach(async () => {
+    after(async () => {
       await Member.deleteMany({});
       await Group.deleteMany({});
       await User.deleteMany({});
@@ -92,9 +92,15 @@ describe("# addMember", () => {
       expect(group.members.length).to.be.equal(1);
       expect(group.members[0].toString()).to.be.equal(member._id.toString());
     });
-    it("should throw when adding duplicate user.");
+    it("should throw when adding duplicate user.", async () => {
+      await expect(
+        (async () => {
+          await group.addMember(newUser);
+        })()
+      ).to.eventually.rejected;
+    });
 
-    afterEach(async () => {
+    after(async () => {
       await Member.deleteMany({});
       await Group.deleteMany({});
       await User.deleteMany({});
@@ -144,7 +150,7 @@ describe("# addMember", () => {
       expect(group.members[0].toString()).to.be.equal(member._id.toString());
     });
 
-    afterEach(async () => {
+    after(async () => {
       await Member.deleteMany({});
       await Group.deleteMany({});
       await User.deleteMany({});
@@ -183,7 +189,13 @@ describe("# addMember", () => {
     it("should not throw", async () => {
       member = await group.addMember(newUser);
     });
-    it("should throw when adding duplicate user.");
+    it("should throw when adding duplicate user.", async () => {
+      await expect(
+        (async () => {
+          await group.addMember(newUser);
+        })()
+      ).to.eventually.rejected;
+    });
 
     it("should have proper values.", () => {
       expect(member.user?.toString()).to.be.equal(newUser._id.toString());
@@ -208,7 +220,7 @@ describe("# addMember", () => {
       expect(group.members[0].toString()).to.be.equal(member._id.toString());
     });
 
-    afterEach(async () => {
+    after(async () => {
       await Member.deleteMany({});
       await Group.deleteMany({});
       await User.deleteMany({});
@@ -243,20 +255,36 @@ describe("# addMember", () => {
       });
     });
     let member: MemberModel;
-    it("should throw", async () => {
+    it("should not throw", async () => {
+      member = await group.addMember(newUser);
+    });
+    it("should throw when adding duplicate user.", async () => {
       await expect(
         (async () => {
-          member = await group.addMember(newUser);
+          await group.addMember(newUser);
         })()
       ).to.eventually.rejected;
     });
-    it("should throw when adding duplicate user.");
 
-    it("should not update the group `members` property", () => {
-      expect(group.members.length).to.be.equal(0);
+    it("should have proper values.", async () => {
+      expect(member.user?.toString()).to.be.equal(newUser._id.toString());
+      expect(member.isShadow).to.be.false;
+      expect(member.isPublished).to.be.false;
+      expect(member.scope_group.toString()).to.be.equal(group._id.toString());
+      expect(member.groups.length).to.be.equal(1);
+
+      const groupItem = member.groups[0];
+      expect(groupItem.group.toString()).to.be.equal(group._id.toString());
+      expect(groupItem.nickname).to.be.equal("New User");
+      expect(groupItem.customID).to.be.equal("No ID");
     });
 
-    afterEach(async () => {
+    it("should update the group `members` property", () => {
+      expect(group.members.length).to.be.equal(1);
+      expect(group.members[0].toString()).to.be.equal(member._id.toString());
+    });
+
+    after(async () => {
       await Member.deleteMany({});
       await Group.deleteMany({});
       await User.deleteMany({});

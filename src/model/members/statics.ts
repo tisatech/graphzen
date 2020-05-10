@@ -2,7 +2,7 @@ import { Model, Document } from "mongoose";
 import { MemberSchema } from "./schema";
 import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
 import { MemberMethods } from "./methods";
-import { Group } from "../groups";
+import { Group, GroupModel } from "../groups";
 
 interface MemberModel extends MemberSchema, Document, MemberMethods {}
 interface MemberEntity extends MemberStatics, Model<MemberModel> {}
@@ -132,11 +132,42 @@ MemberSchema.statics.deleteMember = async function deleteMember(
     throw new GroupIDNotFoundError(
       "Cannot delete member. Group is not defined."
     );
-  const removedGroups = await group.removeMember(_id);
+
+  // remove raw
+
+  const removedGroups = await removeMembersGroup(group, _id);
   member.groups = member.groups.filter(
     (groupItem) => !removedGroups.includes(groupItem.group.toString())
   );
-  console.log(member.scope_group.toString(), groupID);
+
   if (member.scope_group.toString() == groupID) await member.remove();
   else await member.save();
 };
+
+async function removeMembersGroup(baseGroup: GroupModel, _id: string) {
+  // run BFS accross the tree. Find all the group nodes where the member is part of and disconnect them.
+  const nodes: string[] = [];
+  const queue: GroupModel[] = [baseGroup];
+  const promises: Promise<GroupModel>[] = [];
+
+  while (queue.length) {
+    const group = queue.shift();
+    if (!group) break; // this will never happen.
+
+    const memberIndex = group.members.findIndex(
+      (member) => member.toString() == _id
+    );
+    if (memberIndex != -1) {
+      await group.populate("subgroups").execPopulate();
+      nodes.push(group._id.toString());
+
+      const subgroups: GroupModel[] = group.subgroups as any;
+      queue.push(...subgroups);
+      group.members.splice(memberIndex, 1);
+      promises.push(group.save());
+    }
+  }
+
+  await Promise.all(promises);
+  return nodes;
+}

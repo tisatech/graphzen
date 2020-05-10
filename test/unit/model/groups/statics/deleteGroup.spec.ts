@@ -114,7 +114,7 @@ describe("# deleteGroup", () => {
       const member = members[0];
       expect(member._id.toString()).to.be.equal(memberID);
       expect(member.groups.length).to.be.equal(1);
-      expect(member.groups[0].group.toString()).to.be.equal(_id);
+      expect(member.groups[0].group.toString()).to.be.equal(rootID);
     });
     it("should delete all subgroups.", async () => {
       const groups = await Group.find({});

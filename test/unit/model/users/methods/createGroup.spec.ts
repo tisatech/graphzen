@@ -32,6 +32,7 @@ describe("# createGroup", () => {
   it("should contain the correct group details", () => {
     expect(group.createdBy.toString()).to.be.equal(user._id.toString());
     expect(group.parentGroup).to.not.exist;
+    expect(group.isRoot).to.be.true;
   });
   it("should update `owned_group` in the user", () => {
     expect(user.owned_groups.length).to.be.equal(1);

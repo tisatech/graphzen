@@ -38,6 +38,12 @@ export class MemberNotShadowError extends Error {
 export class MemberShadowError extends Error {
   name = "MemberShadowError";
 }
+/**
+ * Thrown when adding a duplicate Member in a group.
+ */
+export class UserAlreadyInGroup extends Error {
+  name = "UserAlreadyInGroup";
+}
 
 /**
  * Thrown when trying to add a user that is not part of the root group.

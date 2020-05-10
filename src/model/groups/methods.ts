@@ -7,12 +7,13 @@ import {
   GroupIDNotFoundError,
   GroupHasNoParentError,
   UserNotInRoot,
+  UserAlreadyInGroup,
 } from "../../lib/errors";
 import { Group } from ".";
 
 export interface GroupMethods {
   addMember: (user?: UserModel) => Promise<MemberModel>;
-  removeMember: (member: MemberModel["_id"]) => Promise<string[]>;
+  removeMember: (member: MemberModel["_id"]) => Promise<void>;
   addGroup: (payload: INewGroupPayload) => Promise<GroupModel>;
   removeGroup: (_id: GroupModel["_id"]) => Promise<void>;
   forkAsChild: (createdBy: UserModel["_id"]) => Promise<GroupModel>;
@@ -32,6 +33,14 @@ GroupSchema.methods.addMember = async function addMember(
   user?: UserModel
 ) {
   const { isRoot } = this;
+
+  if (user) {
+    const members = await Member.find({
+      "groups.group": this._id.toString(),
+      user: user._id.toString(),
+    }).exec();
+    if (members.length) throw new UserAlreadyInGroup("Can not add member.");
+  }
 
   if (isRoot) {
     const member = await Member.createMember({
@@ -55,7 +64,17 @@ GroupSchema.methods.addMember = async function addMember(
     const member = parentMembers.find(
       (member) => member.user?.toString() == user._id.toString()
     );
-    if (!member) throw new UserNotInRoot("Can not add new member.");
+    if (!member) {
+      const member = await Member.createMember({
+        nickname: user.name,
+        customID: "No ID",
+        scope_group: this._id.toString(),
+      });
+      await member.assignUser(user._id.toString());
+      this.members.push(member._id.toString());
+      await this.save();
+      return member;
+    }
 
     const parentGroupItem = member.groups.find(
       (groupItem) => groupItem.group == parent._id.toString()
@@ -90,39 +109,13 @@ GroupSchema.methods.addMember = async function addMember(
 /**
  * Remove a member in the group. Returns all the groups where the member is removed.
  * @param _id - Id of the member.
- * @returns The groups where the member is removed.
  * @throws MemberIDNotFoundError
  */
 GroupSchema.methods.removeMember = async function removeMember(
   this: GroupModel,
   _id: string
 ) {
-  // run BFS accross the tree. Find all the group nodes where the member is part of and disconnect them.
-  const nodes: string[] = [];
-  const queue: GroupModel[] = [this];
-  const promises: Promise<GroupModel>[] = [];
-
-  while (queue.length) {
-    const group = queue.shift();
-    if (!group) break; // this will never happen.
-
-    const memberIndex = group.members.findIndex(
-      (member) => member.toString() == _id
-    );
-    if (memberIndex != -1) {
-      await group.populate("subgroups").execPopulate();
-      nodes.push(group._id.toString());
-
-      const subgroups: GroupModel[] = group.subgroups as any;
-      queue.push(...subgroups);
-
-      group.members.splice(memberIndex, 1);
-      promises.push(group.save());
-    }
-  }
-
-  await Promise.all(promises);
-  return nodes;
+  await Member.deleteMember(_id, this._id.toString());
 };
 
 /**
@@ -190,7 +183,7 @@ GroupSchema.methods.forkAsChild = async function forkAsChild(
 
   const group = await Group.createGroup({
     name: this.name + " - Copy",
-    description: "",
+    description: this.description,
     createdBy,
     parentGroup: this._id,
   });
@@ -199,11 +192,11 @@ GroupSchema.methods.forkAsChild = async function forkAsChild(
   });
   await group.save();
 
-  // Assign new members to group.
+  // Assign new group to members.
   const members = await Member.find({ _id: { $in: this.members } }).exec();
   const promises = members.map(async (member) => {
     const oldGroup = member.groups.find(
-      (groupItem) => groupItem == this._id.toString()
+      (groupItem) => groupItem.group.toString() == this._id.toString()
     );
     if (!oldGroup)
       throw new GroupIDNotFoundError(
@@ -212,7 +205,7 @@ GroupSchema.methods.forkAsChild = async function forkAsChild(
 
     const { nickname, customID } = oldGroup;
     member.groups.push({
-      group: this._id.toString(),
+      group: group._id.toString(),
       nickname,
       customID,
     });
@@ -241,27 +234,47 @@ GroupSchema.methods.forkAsSibling = async function forkAsSibling(
 
   // Create new Group
   const group = await Group.createGroup({
-    name: this.name + "- Copy",
-    description: "",
+    name: this.name + " - Copy",
+    description: this.description,
     createdBy,
     parentGroup: this.parentGroup,
   });
+  this.members.forEach((memberId) => {
+    group.members.push(memberId);
+  });
   await group.save();
 
-  // add members to the group
-  for (let _id of this.members) {
-    const member = await Member.getMember(_id);
+  // Assign new group to members.
+  const members = await Member.find({ _id: { $in: this.members } }).exec();
+  const promises = members.map(async (member) => {
+    const oldGroup = member.groups.find(
+      (groupItem) => groupItem.group.toString() == this._id.toString()
+    );
+    if (!oldGroup)
+      throw new GroupIDNotFoundError(
+        "Cannot update member details when forking."
+      );
 
-    if (member.user) {
-      const user = await User.getUser(member.user);
-      await group.addMember(user);
-    } else await group.addMember();
-  }
+    const { nickname, customID } = oldGroup;
+    member.groups.push({
+      group: group._id.toString(),
+      nickname,
+      customID,
+    });
+    await member.save();
+  });
+  await Promise.all(promises);
 
   // Assign group to the parent.
-  const parentGroup = await Group.getGroup(this.parentGroup);
-  parentGroup.subgroups.push(group._id);
-  await parentGroup.save();
+  if (this.isRoot) {
+    const parentUser = await User.getUser(this.createdBy.toString());
+    parentUser.owned_groups.push(group._id);
+    await parentUser.save();
+  } else {
+    const parentGroup = await Group.getGroup(this.parentGroup);
+    parentGroup.subgroups.push(group._id);
+    await parentGroup.save();
+  }
 
   return group;
 };
