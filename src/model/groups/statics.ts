@@ -4,6 +4,7 @@ import { IDNotFoundError } from "../../lib/errors";
 import { UserModel } from "../users";
 import { GroupMethods } from "./methods";
 import { Member } from "../members";
+import { Group } from ".";
 
 interface GroupModel extends GroupSchema, Document, GroupMethods {}
 interface GroupModelPopulated
@@ -62,11 +63,22 @@ GroupSchema.statics.createGroup = async function createGroup(
   return await group.save();
 };
 
-/**
- * Get Group
- * @param _id - ID of the Group.
- *
+/** Get group
+ * @param _id - ID of the group.
  * @returns The group.
+ * @throws IDNotfoundError.
+ */
+GroupSchema.statics.getGroup = async function getGroup(
+  this: GroupEntity,
+  _id: string
+) {
+  const group = await Group.findById(_id).exec();
+  if (!group) throw new IDNotFoundError("Can not get group.");
+  return group;
+};
+
+/**
+ * Update Group
  * @param _id - ID of the Group.
  * @param payload.name - The name of the Group.
  * @param payload.description - The description of the Group.
@@ -106,11 +118,10 @@ GroupSchema.statics.deleteGroup = async function deleteGroup(
     await Member.deleteMember(_id, group._id.toString());
   });
   await Promise.all(memberPromises);
-
   //delete perform BFS and delete all
   const queue: GroupModel[] = [group];
   const promises: Promise<GroupModel>[] = [];
-  while (!queue.length) {
+  while (queue.length) {
     const group = queue.shift();
     if (!group) break; // this will not happen.
 

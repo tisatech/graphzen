@@ -136,7 +136,7 @@ MemberSchema.statics.deleteMember = async function deleteMember(
   member.groups = member.groups.filter(
     (groupItem) => !removedGroups.includes(groupItem.group.toString())
   );
-
-  if (member.scope_group.toString() == _id) await member.remove();
+  console.log(member.scope_group.toString(), groupID);
+  if (member.scope_group.toString() == groupID) await member.remove();
   else await member.save();
 };

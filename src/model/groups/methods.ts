@@ -1,6 +1,6 @@
 import { GroupSchema } from "./schema";
 import { MemberModel, Member } from "../members";
-import { UserModel } from "../users";
+import { UserModel, User } from "../users";
 import { Document, Model, model } from "mongoose";
 import { INewGroupPayload, GroupStatics } from "./statics";
 import {
@@ -11,7 +11,7 @@ import {
 import { Group } from ".";
 
 export interface GroupMethods {
-  addMember: (user?: UserModel["_id"]) => Promise<MemberModel>;
+  addMember: (user?: UserModel) => Promise<MemberModel>;
   removeMember: (member: MemberModel["_id"]) => Promise<string[]>;
   addGroup: (payload: INewGroupPayload) => Promise<GroupModel>;
   removeGroup: (_id: GroupModel["_id"]) => Promise<void>;
@@ -39,8 +39,11 @@ GroupSchema.methods.addMember = async function addMember(
       customID: "No ID",
       scope_group: this._id.toString(),
     });
+
+    if (user) await member.assignUser(user._id.toString());
     this.members.push(member._id.toString());
     await this.save();
+    return member;
   } else if (user) {
     // check if the member is existing in the parent.
     const parent = await Group.findOne({ subgroups: this._id.toString() });
@@ -49,7 +52,9 @@ GroupSchema.methods.addMember = async function addMember(
     const parentMembers = await Member.find({
       _id: { $in: parent.members },
     }).exec();
-    const member = parentMembers.find((member) => member.user == user._id);
+    const member = parentMembers.find(
+      (member) => member.user?.toString() == user._id.toString()
+    );
     if (!member) throw new UserNotInRoot("Can not add new member.");
 
     const parentGroupItem = member.groups.find(
@@ -68,6 +73,7 @@ GroupSchema.methods.addMember = async function addMember(
 
     this.members.push(member._id.toString());
     await this.save();
+    return member;
   } else {
     // Add shadow member in Group
     const member = await Member.createMember({
@@ -77,6 +83,7 @@ GroupSchema.methods.addMember = async function addMember(
     });
     this.members.push(member._id.toString());
     await this.save();
+    return member;
   }
 };
 
@@ -137,7 +144,7 @@ GroupSchema.methods.addGroup = async function addGroup(
 
   const group = await Group.createGroup({
     ...payload,
-    parentGroup: this._id,
+    parentGroup: this._id.toString(),
   });
   await group.save();
 
@@ -244,7 +251,11 @@ GroupSchema.methods.forkAsSibling = async function forkAsSibling(
   // add members to the group
   for (let _id of this.members) {
     const member = await Member.getMember(_id);
-    await group.addMember(member.user);
+
+    if (member.user) {
+      const user = await User.getUser(member.user);
+      await group.addMember(user);
+    } else await group.addMember();
   }
 
   // Assign group to the parent.
