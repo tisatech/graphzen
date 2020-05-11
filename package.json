@@ -9,10 +9,11 @@
     "test": "npm run test:unit",
     "watch": "tsc --watch",
     "docs": "typedoc",
-    "check": "tsc && npm run lint && npm test && npm run docs ",
+    "build": "tsc",
+    "check": "npm run build && npm run lint && npm test && npm run docs ",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "test:unit": "mocha ./dist/test/unit/index.spec.js --exit"
+    "test:unit": "mocha -r ts-node/register ./dist/test/unit/index.spec.js --exit"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
@@ -47,6 +48,7 @@
     "eslint-plugin-standard": "^4.0.1",
     "json-schema": "^0.2.5",
     "mocha": "^7.1.2",
+    "ts-node": "^8.10.1",
     "typedoc": "^0.17.0-3",
     "typescript": "^3.8.3"
   }
