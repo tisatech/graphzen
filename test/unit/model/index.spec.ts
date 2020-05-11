@@ -12,4 +12,5 @@ describe("# Models", () => {
 
   require("./users/index.spec");
   require("./groups/index.spec");
+  require("./members/index.spec");
 });

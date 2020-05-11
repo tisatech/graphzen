@@ -6,7 +6,7 @@ import { MemberNotShadowError, MemberShadowError } from "../../lib/errors";
 export interface MemberMethods {
   assignUser(user: string): Promise<void>;
   publish(): Promise<void>;
-  unPublish(): Promise<void>;
+  unpublish(): Promise<void>;
   unassignUser(): Promise<void>;
   getClearanceOwned(): Promise<ClearanceModel[]>;
   getClearance(): Promise<ClearanceModel[]>;
@@ -58,7 +58,7 @@ MemberSchema.methods.publish = async function assignUser(this: MemberModel) {
  * Unpublish the shadow member url.
  * @throws MemberNotShadowError
  */
-MemberSchema.methods.unPublish = async function assignUser(this: MemberModel) {
+MemberSchema.methods.unpublish = async function assignUser(this: MemberModel) {
   if (!this.isShadow)
     throw new MemberNotShadowError("Cannot unpublish member.");
   this.isPublished = false;
