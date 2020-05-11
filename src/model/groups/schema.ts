@@ -1,20 +1,20 @@
-import { Schema, Document } from "mongoose";
-import { MemberModel } from "../members";
-import { ClearanceModel } from "../clearances";
-import { UserModel } from "../users/index";
-import { GroupMethods } from "./methods";
+import {Schema, Document} from 'mongoose';
+import {MemberModel} from '../members';
+import {ClearanceModel} from '../clearances';
+import {UserModel} from '../users/index';
+import {GroupMethods} from './methods';
 
 export const GroupSchema = new Schema({
   name: String,
   description: String,
-  isRoot: { type: Boolean, default: true },
-  members: [{ type: Schema.Types.ObjectId, ref: "Member" }],
-  clearances: [{ type: Schema.Types.ObjectId, ref: "Clearance" }],
-  subgroups: [{ type: Schema.Types.ObjectId, ref: "Group" }],
-  createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+  isRoot: {type: Boolean, default: true},
+  members: [{type: Schema.Types.ObjectId, ref: 'Member'}],
+  clearances: [{type: Schema.Types.ObjectId, ref: 'Clearance'}],
+  subgroups: [{type: Schema.Types.ObjectId, ref: 'Group'}],
+  createdBy: {type: Schema.Types.ObjectId, ref: 'User'},
 
-  parentGroup: { type: Schema.Types.ObjectId, ref: "Group" },
-  parentUser: { type: Schema.Types.ObjectId, ref: "User" },
+  parentGroup: {type: Schema.Types.ObjectId, ref: 'Group'},
+  parentUser: {type: Schema.Types.ObjectId, ref: 'User'},
 });
 
 interface BaseSchema {

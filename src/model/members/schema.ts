@@ -1,4 +1,4 @@
-import { Schema, Document } from "mongoose";
+import { Schema } from "mongoose";
 import { UserModel } from "../users";
 import { GroupModel } from "../groups";
 

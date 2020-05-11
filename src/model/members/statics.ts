@@ -8,16 +8,16 @@ interface MemberModel extends MemberSchema, Document, MemberMethods {}
 interface MemberEntity extends MemberStatics, Model<MemberModel> {}
 
 export interface MemberStatics {
-  createMember: (payload: INewMemberPayload) => Promise<MemberModel>;
+  createMember: (payload: NewMemberPayload) => Promise<MemberModel>;
   getMember: (_id: string) => Promise<MemberModel>;
-  updateMember: (_id: string, payload: IUpdateMemberPayload) => Promise<void>;
+  updateMember: (_id: string, payload: UpdateMemberPayload) => Promise<void>;
   deleteMember: (_id: string, groupID: string) => Promise<void>;
 }
 
 /**
  * Interface payload for creating new Member
  */
-export interface INewMemberPayload {
+export interface NewMemberPayload {
   scope_group: MemberSchema["scope_group"];
   nickname: MemberSchema["groups"][0]["nickname"];
   customID: MemberSchema["groups"][0]["customID"];
@@ -25,10 +25,41 @@ export interface INewMemberPayload {
 /**
  * Interface payload for updating Member
  */
-interface IUpdateMemberPayload {
+interface UpdateMemberPayload {
   group: MemberSchema["groups"][0]["group"];
   nickname: MemberSchema["groups"][0]["nickname"];
   customID: MemberSchema["groups"][0]["customID"];
+}
+
+/**
+ * @ignore
+ */
+async function removeMembersGroup(baseGroup: GroupModel, _id: string) {
+  // run BFS accross the tree. Find all the group nodes where the member is part of and disconnect them.
+  const nodes: string[] = [];
+  const queue: GroupModel[] = [baseGroup];
+  const promises: Promise<GroupModel>[] = [];
+
+  while (queue.length) {
+    const group = queue.shift();
+    if (!group) break; // this will never happen.
+
+    const memberIndex = group.members.findIndex(
+      (member) => member.toString() == _id
+    );
+    if (memberIndex != -1) {
+      await group.populate("subgroups").execPopulate();
+      nodes.push(group._id.toString());
+
+      const subgroups: GroupModel[] = group.subgroups as any;
+      queue.push(...subgroups);
+      group.members.splice(memberIndex, 1);
+      promises.push(group.save());
+    }
+  }
+
+  await Promise.all(promises);
+  return nodes;
 }
 
 /**
@@ -36,11 +67,11 @@ interface IUpdateMemberPayload {
  * @param payload.scope_group - The group which will act as the root scope of the Member.
  * @param payload.nickname - The nickname or custom name of the Member.
  * @param payload.customID - The customId of the Member.
- * @returns The nelwy created member.
+ * @return The nelwy created member.
  */
 MemberSchema.statics.createMember = async function createMember(
   this: MemberEntity,
-  payload: INewMemberPayload
+  payload: NewMemberPayload
 ) {
   const member = new this();
   const { scope_group, nickname, customID } = payload;
@@ -61,7 +92,7 @@ MemberSchema.statics.createMember = async function createMember(
  * Get Member
  * @param _id - ID of the Member.
  *
- * @returns The requested member.
+ * @return The requested member.
  * @throws IDNotFoundError
  */
 MemberSchema.statics.getMember = async function getMember(
@@ -85,7 +116,7 @@ MemberSchema.statics.getMember = async function getMember(
 MemberSchema.statics.updateMember = async function updateMember(
   this: MemberEntity,
   _id: string,
-  payload: IUpdateMemberPayload
+  payload: UpdateMemberPayload
 ) {
   const member = await this.findById(_id).exec();
   if (!member) throw new IDNotFoundError("Cannot update member.");
@@ -121,17 +152,19 @@ MemberSchema.statics.deleteMember = async function deleteMember(
   const groupIndex = member.groups.findIndex(
     (groupItem) => groupItem.group.toString() == groupID
   );
-  if (groupIndex == -1)
+  if (groupIndex == -1) {
     throw new GroupIDNotFoundError(
       "Cannot delete member. Member is not part of the group."
     );
+  }
 
   // disconnect from groups.
   const group = await Group.findById(groupID);
-  if (!group)
+  if (!group) {
     throw new GroupIDNotFoundError(
       "Cannot delete member. Group is not defined."
     );
+  }
 
   // remove raw
 
@@ -143,31 +176,3 @@ MemberSchema.statics.deleteMember = async function deleteMember(
   if (member.scope_group.toString() == groupID) await member.remove();
   else await member.save();
 };
-
-async function removeMembersGroup(baseGroup: GroupModel, _id: string) {
-  // run BFS accross the tree. Find all the group nodes where the member is part of and disconnect them.
-  const nodes: string[] = [];
-  const queue: GroupModel[] = [baseGroup];
-  const promises: Promise<GroupModel>[] = [];
-
-  while (queue.length) {
-    const group = queue.shift();
-    if (!group) break; // this will never happen.
-
-    const memberIndex = group.members.findIndex(
-      (member) => member.toString() == _id
-    );
-    if (memberIndex != -1) {
-      await group.populate("subgroups").execPopulate();
-      nodes.push(group._id.toString());
-
-      const subgroups: GroupModel[] = group.subgroups as any;
-      queue.push(...subgroups);
-      group.members.splice(memberIndex, 1);
-      promises.push(group.save());
-    }
-  }
-
-  await Promise.all(promises);
-  return nodes;
-}

@@ -1,12 +1,12 @@
-import { config } from "dotenv";
-import chaiAsPromised from "chai-as-promised";
-import { use } from "chai";
+import {config} from 'dotenv';
+import chaiAsPromised from 'chai-as-promised';
+import {use} from 'chai';
 
 use(chaiAsPromised);
 
-describe("# Unit", () => {
+describe('# Unit', () => {
   before(() => {
     config();
   });
-  require("./model/index.spec");
+  require('./model/index.spec');
 });

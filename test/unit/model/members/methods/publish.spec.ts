@@ -1,39 +1,39 @@
-import { expect } from "chai";
-import { Member, MemberModel } from "../../../../../src/model/members";
-import { GroupModel, Group } from "../../../../../src/model/groups";
-import { User, UserModel } from "../../../../../src/model/users";
+import {expect} from 'chai';
+import {Member, MemberModel} from '../../../../../src/model/members';
+import {GroupModel, Group} from '../../../../../src/model/groups';
+import {User, UserModel} from '../../../../../src/model/users';
 
-describe("# publish", () => {
+describe('# publish', () => {
   let group: GroupModel;
   let member: MemberModel;
   let nonShadowMember: MemberModel;
   let user: UserModel;
   before(async () => {
     user = await User.createUser({
-      name: "sample",
-      email: "email@email.com",
-      password: "password",
+      name: 'sample',
+      email: 'email@email.com',
+      password: 'password',
     });
     group = await user.createGroup({
-      name: "sample group",
-      description: "sample group",
+      name: 'sample group',
+      description: 'sample group',
     });
     nonShadowMember = await group.addMember(user);
     member = await group.addMember();
   });
 
-  it("should throw when publishing non-shadow member.", async () => {
+  it('should throw when publishing non-shadow member.', async () => {
     await expect(
-      (async () => {
-        await nonShadowMember.publish();
-      })()
+        (async () => {
+          await nonShadowMember.publish();
+        })(),
     ).to.eventually.rejected;
   });
-  it("should not throw.", async () => {
+  it('should not throw.', async () => {
     await member.publish();
   });
 
-  it("should update the member document", async () => {
+  it('should update the member document', async () => {
     const memberDB = await Member.findById(member._id.toString()).exec();
     expect(memberDB).to.exist;
     expect(memberDB?.user).to.not.exist;

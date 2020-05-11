@@ -5,6 +5,7 @@ import { MemberModel, Member } from "../../../../../src/model/members";
 
 describe("# getMember", () => {
   let group: GroupModel;
+  let member: MemberModel;
 
   before(async () => {
     const user = await User.createUser({
@@ -22,7 +23,6 @@ describe("# getMember", () => {
     await group.addMember();
     await group.addMember();
   });
-  let member: MemberModel;
 
   it("should return the correct member", async () => {
     const memberDB = await Member.getMember(member._id.toString());

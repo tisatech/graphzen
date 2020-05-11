@@ -1,1 +1,3 @@
-export interface ClearanceModel {}
+export interface ClearanceModel {
+  name: string;
+}

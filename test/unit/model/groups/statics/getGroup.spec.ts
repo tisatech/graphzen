@@ -1,19 +1,19 @@
-import { expect } from "chai";
-import { Group, GroupModel } from "../../../../../src/model/groups";
-import { User } from "../../../../../src/model/users";
+import {expect} from 'chai';
+import {Group, GroupModel} from '../../../../../src/model/groups';
+import {User} from '../../../../../src/model/users';
 
-describe("# getGroup", () => {
+describe('# getGroup', () => {
   let group: GroupModel;
 
   before(async () => {
     const testPayload: any = {
-      name: "Sample Group",
-      description: "Group description.",
+      name: 'Sample Group',
+      description: 'Group description.',
     };
     const user = await User.createUser({
-      name: "Sample name",
-      email: "sample@sample.com",
-      password: "sample-password",
+      name: 'Sample name',
+      email: 'sample@sample.com',
+      password: 'sample-password',
     });
     testPayload.createdBy = user._id.toString();
 
@@ -28,7 +28,7 @@ describe("# getGroup", () => {
     }
   });
 
-  it("should return the correct group", async () => {
+  it('should return the correct group', async () => {
     const groupDB = await Group.getGroup(group._id.toString());
     expect(groupDB.toObject()).to.be.eql(group.toObject());
   });

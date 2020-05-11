@@ -34,8 +34,7 @@ MemberSchema.methods.assignUser = async function assignUser(
  * @throws MemberNotShadowError
  */
 MemberSchema.methods.unassignUser = async function assignUser(
-  this: MemberModel,
-  _id: string
+  this: MemberModel
 ) {
   if (this.isShadow) throw new MemberShadowError("Cannot unassign user.");
   this.user = undefined;
@@ -59,8 +58,9 @@ MemberSchema.methods.publish = async function assignUser(this: MemberModel) {
  * @throws MemberNotShadowError
  */
 MemberSchema.methods.unpublish = async function assignUser(this: MemberModel) {
-  if (!this.isShadow)
+  if (!this.isShadow) {
     throw new MemberNotShadowError("Cannot unpublish member.");
+  }
   this.isPublished = false;
   await this.save();
 };

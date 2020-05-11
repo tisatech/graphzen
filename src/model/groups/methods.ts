@@ -1,37 +1,39 @@
 import { GroupSchema } from "./schema";
 import { MemberModel, Member } from "../members";
 import { UserModel, User } from "../users";
-import { Document, Model, model } from "mongoose";
-import { INewGroupPayload, GroupStatics } from "./statics";
+import { Model, model } from "mongoose";
+import { NewGroupPayload, GroupStatics } from "./statics";
 import {
   GroupIDNotFoundError,
   GroupHasNoParentError,
-  UserNotInRoot,
   UserAlreadyInGroup,
 } from "../../lib/errors";
-import { Group } from ".";
+import { Group, GroupModel } from ".";
+import { GroupEntity } from "./interfaces";
 
+/**
+ * Interface for the methods of Group documents.
+ * @category Group
+ */
 export interface GroupMethods {
   addMember: (user?: UserModel) => Promise<MemberModel>;
   removeMember: (member: MemberModel["_id"]) => Promise<void>;
-  addGroup: (payload: INewGroupPayload) => Promise<GroupModel>;
+  addGroup: (payload: NewGroupPayload) => Promise<GroupModel>;
   removeGroup: (_id: GroupModel["_id"]) => Promise<void>;
   forkAsChild: (createdBy: UserModel["_id"]) => Promise<GroupModel>;
   forkAsSibling: (createdBy: UserModel["_id"]) => Promise<GroupModel>;
 }
 
-interface GroupModel extends GroupSchema, Document, GroupMethods {}
-interface GroupEntity extends GroupStatics, Model<GroupModel> {}
-
 /**
  * Add a new member in the group
  * @param user - User to be added
- * @returns The member created.
+ * @return The member created.
+ * @category Group > Methods
  */
-GroupSchema.methods.addMember = async function addMember(
+async function addMember(
   this: GroupModel,
   user?: UserModel
-) {
+): Promise<MemberModel> {
   const { isRoot } = this;
 
   if (user) {
@@ -79,8 +81,9 @@ GroupSchema.methods.addMember = async function addMember(
     const parentGroupItem = member.groups.find(
       (groupItem) => groupItem.group == parent._id.toString()
     );
-    if (!parentGroupItem)
+    if (!parentGroupItem) {
       throw new GroupIDNotFoundError("Can not add new member.");
+    }
 
     const { nickname, customID } = parentGroupItem;
     member.groups.push({
@@ -104,32 +107,26 @@ GroupSchema.methods.addMember = async function addMember(
     await this.save();
     return member;
   }
-};
+}
+GroupSchema.methods.addMember = addMember;
 
 /**
  * Remove a member in the group. Returns all the groups where the member is removed.
  * @param _id - Id of the member.
+ * @category Group > Methods
  * @throws MemberIDNotFoundError
  */
-GroupSchema.methods.removeMember = async function removeMember(
-  this: GroupModel,
-  _id: string
-) {
+async function removeMember(this: GroupModel, _id: string) {
   await Member.deleteMember(_id, this._id.toString());
-};
+}
+GroupSchema.methods.removeMember = removeMember;
 
 /**
  * Add a new subgroup.
- * @param payload.name - The name of the Group.
- * @param payload.description - The description of the Group.
- * @param payload.createdBy - The user who created the group.
- * @returns The newly created group.
+ * @category Group > Methods
+ * @return The newly created group.
  */
-
-GroupSchema.methods.addGroup = async function addGroup(
-  this: GroupModel,
-  payload: INewGroupPayload
-) {
+async function addGroup(this: GroupModel, payload: NewGroupPayload) {
   const Group: GroupEntity = model<
     GroupModel,
     Model<GroupModel> & GroupStatics
@@ -144,16 +141,15 @@ GroupSchema.methods.addGroup = async function addGroup(
   this.subgroups.push(group._id);
   await this.save();
   return group;
-};
+}
+GroupSchema.methods.addGroup = addGroup;
 
 /**
  * Remove a subgroup.
  * @param _id - The ID of the Group.
+ * @category Group > Methods
  */
-GroupSchema.methods.removeGroup = async function removeGroup(
-  this: GroupModel,
-  _id: string
-) {
+async function removeGroup(this: GroupModel, _id: string) {
   const Group: GroupEntity = model<
     GroupModel,
     Model<GroupModel> & GroupStatics
@@ -165,17 +161,16 @@ GroupSchema.methods.removeGroup = async function removeGroup(
   this.subgroups.splice(index, 1);
   await this.save();
   await Group.deleteGroup(_id);
-};
+}
+GroupSchema.methods.removeGroup = removeGroup;
 
 /**
  * Fork the current group as child group.
  * @param createdBy - The user who forked the group
- * @returns The newly created group.
+ * @category Group > Methods
+ * @return The newly created group.
  */
-GroupSchema.methods.forkAsChild = async function forkAsChild(
-  this: GroupModel,
-  createdBy: UserModel["_id"]
-) {
+async function forkAsChild(this: GroupModel, createdBy: UserModel["_id"]) {
   const Group: GroupEntity = model<
     GroupModel,
     Model<GroupModel> & GroupStatics
@@ -198,10 +193,11 @@ GroupSchema.methods.forkAsChild = async function forkAsChild(
     const oldGroup = member.groups.find(
       (groupItem) => groupItem.group.toString() == this._id.toString()
     );
-    if (!oldGroup)
+    if (!oldGroup) {
       throw new GroupIDNotFoundError(
         "Cannot update member details when forking."
       );
+    }
 
     const { nickname, customID } = oldGroup;
     member.groups.push({
@@ -216,17 +212,16 @@ GroupSchema.methods.forkAsChild = async function forkAsChild(
   this.subgroups.push(group._id);
   await this.save();
   return group;
-};
+}
+GroupSchema.methods.forkAsChild = forkAsChild;
 
 /**
  * Fork the current group as child group.
  * @param createdBy - The user who forked the group
- * @returns The newly created group.
+ * @category Group > Methods
+ * @return The newly created group.
  */
-GroupSchema.methods.forkAsSibling = async function forkAsSibling(
-  this: GroupModel,
-  createdBy: UserModel["_id"]
-) {
+async function forkAsSibling(this: GroupModel, createdBy: UserModel["_id"]) {
   const Group: GroupEntity = model<
     GroupModel,
     Model<GroupModel> & GroupStatics
@@ -250,10 +245,11 @@ GroupSchema.methods.forkAsSibling = async function forkAsSibling(
     const oldGroup = member.groups.find(
       (groupItem) => groupItem.group.toString() == this._id.toString()
     );
-    if (!oldGroup)
+    if (!oldGroup) {
       throw new GroupIDNotFoundError(
         "Cannot update member details when forking."
       );
+    }
 
     const { nickname, customID } = oldGroup;
     member.groups.push({
@@ -277,4 +273,5 @@ GroupSchema.methods.forkAsSibling = async function forkAsSibling(
   }
 
   return group;
-};
+}
+GroupSchema.methods.forkAsSibling = forkAsSibling;

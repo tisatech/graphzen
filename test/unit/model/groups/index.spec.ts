@@ -1,4 +1,4 @@
-describe("# Group", () => {
-  require("./statics/index.spec");
-  require("./methods/index.spec");
+describe('# Group', () => {
+  require('./statics/index.spec');
+  require('./methods/index.spec');
 });

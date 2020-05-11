@@ -1,3 +1,3 @@
-describe("# Hook", () => {
-  require("./preSave.spec");
+describe('# Hook', () => {
+  require('./preSave.spec');
 });

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { GroupModel, Group } from "../../../../../src/model/groups";
-import { User, UserModel } from "../../../../../src/model/users";
+import { User } from "../../../../../src/model/users";
 import { MemberModel, Member } from "../../../../../src/model/members";
 
 describe("# removeMember", () => {

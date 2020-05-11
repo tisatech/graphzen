@@ -1,106 +1,104 @@
-import { Model, Document } from "mongoose";
 import { UserSchema } from "./schema";
 import { IDNotFoundError } from "../../lib/errors";
 import { Group } from "../groups";
-import { UserMethods } from "./methods";
+import { UserModel } from ".";
+import { UserEntity } from "./interfaces";
 
-interface UserModel extends UserSchema, Document, UserMethods {}
-interface UserEntity extends UserStatics, Model<UserModel> {}
-
+/**
+ * User schema static methods.
+ * @category User
+ */
 export interface UserStatics {
-  createUser: (payload: INewUserPayload) => Promise<UserModel>;
+  createUser: (payload: NewUserPayload) => Promise<UserModel>;
   getUser: (_id: string) => Promise<UserModel>;
-  updateUser: (_id: string, payload: IUpdateUserPayload) => Promise<void>;
+  updateUser: (_id: string, payload: UpdateUserPayload) => Promise<void>;
   deleteUser: (_id: string) => Promise<void>;
 }
 
 /**
  * Interface payload for creating new User
+ * @category User
  */
-interface INewUserPayload {
+interface NewUserPayload {
+  /** The name of the new user */
   name: UserSchema["name"];
+  /** The email of the new user */
   email: UserSchema["email"];
+  /** The password of the new user */
   password: UserSchema["password"];
 }
 /**
  * Interface payload for updating new User
+ * @category User
  */
-interface IUpdateUserPayload {
+interface UpdateUserPayload {
+  /** The name of the new user */
   name: UserSchema["name"];
+  /** The email of the new user */
   email: UserSchema["email"];
+  /** The password of the new user */
   password: UserSchema["password"];
 }
 
 /**
  * Create a new user
- * @param payload.name - The name of the user.
- * @param payload.email - The email of the user.
- * @param payload.password - The password of the user.
- *
- * @returns the newly created user.
+ * @return the newly created user.
+ * @category User > Statics
  */
-UserSchema.statics.createUser = async function createUser(
-  this: UserEntity,
-  payload: INewUserPayload
-) {
+async function createUser(this: UserEntity, payload: NewUserPayload) {
   const { name, email, password } = payload;
   const user = new this();
   user.name = name;
   user.email = email;
   user.password = password;
   return await user.save();
-};
+}
+UserSchema.statics.createUser = createUser;
 
 /**
  * Get user
  * @param _id - ID of the user.
- *
- * @returns the requested user.
+ * @return the requested user.
  * @throws IDNotFoundError
+ * @category User > Statics
  */
-UserSchema.statics.getUser = async function getUser(
-  this: UserEntity,
-  _id: string
-) {
+async function getUser(this: UserEntity, _id: string) {
   const user = await this.findById(_id).exec();
   if (!user) throw new IDNotFoundError("Cannot get User.");
   return user;
-};
+}
+UserSchema.statics.getUser = getUser;
 
 /**
  * Update a user
  * @param _id - ID of the user.
- * @param payload.name - The name of the user.
- * @param payload.email - The email of the user.
- * @param payload.password - The password of the user.
- *
+ * @category User > Statics
  * @throws IDNotFoundError
  */
-UserSchema.statics.updateUser = async function updateUser(
+async function updateUser(
   this: UserEntity,
   _id: string,
-  payload: IUpdateUserPayload
+  payload: UpdateUserPayload
 ) {
   const user = await this.findById(_id).exec();
   if (!user) throw new IDNotFoundError("Cannot update user.");
 
-  const props: (keyof IUpdateUserPayload)[] = ["name", "password", "email"];
-  for (const prop of props)
-    if (payload.hasOwnProperty(prop)) user[prop] = payload[prop];
+  const props: (keyof UpdateUserPayload)[] = ["name", "password", "email"];
+  for (const prop of props) {
+    if (payload[prop]) user[prop] = payload[prop];
+  }
 
   await user.save();
-};
+}
+UserSchema.statics.updateUser = updateUser;
 
 /**
  * Delete a user, turn memberships into shadow members, and delete created groups.
  * @param _id - ID of the user.
- *
+ * @category User > Statics
  * @throws IDNotFoundError
  */
-UserSchema.statics.deleteUser = async function deleteUser(
-  this: UserEntity,
-  _id: string
-) {
+async function deleteUser(this: UserEntity, _id: string) {
   const user = await this.findById(_id).exec();
   if (!user) throw new IDNotFoundError("Can not delete user.");
 
@@ -117,4 +115,5 @@ UserSchema.statics.deleteUser = async function deleteUser(
   });
   await Promise.all(promisesMembers);
   await user.remove();
-};
+}
+UserSchema.statics.deleteUser = deleteUser;

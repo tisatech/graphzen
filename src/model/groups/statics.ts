@@ -1,54 +1,52 @@
-import { Model, Document } from "mongoose";
-import { GroupSchema, GroupSchemaPopulated } from "./schema";
+import { GroupSchema } from "./schema";
 import { IDNotFoundError } from "../../lib/errors";
 import { UserModel } from "../users";
-import { GroupMethods } from "./methods";
-import { Member, MemberModel } from "../members";
-import { Group } from ".";
+import { Member } from "../members";
+import { Group, GroupModel } from ".";
+import { GroupEntity, GroupModelPopulated } from "./interfaces";
 
-interface GroupModel extends GroupSchema, Document, GroupMethods {}
-interface GroupModelPopulated
-  extends GroupSchemaPopulated,
-    Document,
-    GroupMethods {}
-interface GroupEntity extends GroupStatics, Model<GroupModel> {}
-
+/**
+ * Group schema static methods.
+ * @category Group
+ */
 export interface GroupStatics {
-  createGroup: (payload: INewGroupPayload) => Promise<GroupModel>;
+  createGroup: (payload: NewGroupPayload) => Promise<GroupModel>;
   getGroup: (_id: string) => Promise<GroupModel>;
-  updateGroup: (_id: string, payload: IUpdateGroupPayload) => Promise<void>;
+  updateGroup: (_id: string, payload: UpdateGroupPayload) => Promise<void>;
   deleteGroup: (_id: string) => Promise<void>;
 }
 
 /**
  * Interface payload for creating new Group
+ * @category Group
  */
-export interface INewGroupPayload {
+export interface NewGroupPayload {
+  /** The name of the group. */
   name: GroupSchema["name"];
+  /** The description of the group. */
   description: GroupSchema["description"];
+  /** The ID of the user who created the group. */
   createdBy: UserModel["_id"];
+  /** The ID of the parent group. */
   parentGroup?: GroupSchema["parentGroup"];
 }
 /**
  * Interface payload for updating new Group
+ * @category Group
  */
-interface IUpdateGroupPayload {
+interface UpdateGroupPayload {
+  /** The name of the group. */
   name: GroupSchema["name"];
+  /** The description of the group. */
   description: GroupSchema["description"];
 }
 
 /**
  * Create a new Group
- * @param payload.name - The name of the Group.
- * @param payload.description - The description of the Group.
- * @param payload.createdBy - The user who created the group.
- * @param payload.parentGroup - The group in which this group is created.
- * @returns the newly created group.
+ * @return the newly created group.
+ * @category Group > Statics
  */
-GroupSchema.statics.createGroup = async function createGroup(
-  this: GroupEntity,
-  payload: INewGroupPayload
-) {
+async function createGroup(this: GroupEntity, payload: NewGroupPayload) {
   const { name, description, createdBy, parentGroup } = payload;
   const group = new this();
   group.name = name;
@@ -61,64 +59,62 @@ GroupSchema.statics.createGroup = async function createGroup(
   } else group.parentUser = createdBy;
 
   return await group.save();
-};
+}
+GroupSchema.statics.createGroup = createGroup;
 
 /** Get group
  * @param _id - ID of the group.
- * @returns The group.
+ * @return The group.
+ * @category Group > Statics
  * @throws IDNotfoundError.
  */
-GroupSchema.statics.getGroup = async function getGroup(
-  this: GroupEntity,
-  _id: string
-) {
+async function getGroup(this: GroupEntity, _id: string) {
   const group = await Group.findById(_id).exec();
   if (!group) throw new IDNotFoundError("Can not get group.");
   return group;
-};
+}
+GroupSchema.statics.getGroup = getGroup;
 
 /**
  * Update Group
  * @param _id - ID of the Group.
- * @param payload.name - The name of the Group.
- * @param payload.description - The description of the Group.
+ * @category Group > Statics
  *
  * @throws IDNotFoundError
  */
-GroupSchema.statics.updateGroup = async function updateGroup(
+async function updateGroup(
   this: GroupEntity,
   _id: string,
-  payload: IUpdateGroupPayload
+  payload: UpdateGroupPayload
 ) {
   const group = await this.findById(_id).exec();
   if (!group) throw new IDNotFoundError("Cannot update group.");
 
-  const props: (keyof IUpdateGroupPayload)[] = ["name", "description"];
-  for (const prop of props)
-    if (payload.hasOwnProperty(prop)) group[prop] = payload[prop];
+  const props: (keyof UpdateGroupPayload)[] = ["name", "description"];
+  for (const prop of props) {
+    if (payload[prop]) group[prop] = payload[prop];
+  }
 
   await group.save();
-};
+}
+GroupSchema.statics.updateGroup = updateGroup;
 
 /**
  * Delete a Group
  * @param _id - ID of the Group.
+ * @category Group > Statics
  *
  * @throws IDNotFoundError
  */
-GroupSchema.statics.deleteGroup = async function deleteGroup(
-  this: GroupEntity,
-  _id: string
-) {
+async function deleteGroup(this: GroupEntity, _id: string) {
   const group = await this.findById(_id).exec();
   if (!group) throw new IDNotFoundError("Can not delete group.");
 
   const memberIDs: string[] = [];
   const groupIDs: string[] = [];
 
-  //delete perform BFS and delete all
+  // delete perform BFS and delete all
   const queue: GroupModel[] = [group];
-  const promises: Promise<GroupModel>[] = [];
   while (queue.length) {
     const group = queue.shift();
     if (!group) break; // this will not happen.
@@ -141,18 +137,13 @@ GroupSchema.statics.deleteGroup = async function deleteGroup(
   }
 
   // TODO: parallelize this
-  for (let _id of memberIDs) {
+  for (const _id of memberIDs) {
     const member = await Member.getMember(_id.toString());
-    // member.groups.length = 0;
-    // member.groups.push(
-    //   ...member.groups.filter(
-    //     (groupItem) => !groupIDs.includes(groupItem.group.toString())
-    //     )
-    //     );
     member.groups = member.groups.filter(
       (groupItem) => !groupIDs.includes(groupItem.group.toString())
     );
     if (member.groups.length == 0) await member.remove();
     else await member.save();
   }
-};
+}
+GroupSchema.statics.deleteGroup = deleteGroup;
