@@ -18,49 +18,48 @@ export interface MemberMethods {
  * @param user - User _id to be assigned.
  * @throws MemberShadowError
  */
-MemberSchema.methods.assignUser = async function assignUser(
-  this: MemberModel,
-  _id: string
-) {
+async function assignUser(this: MemberModel, _id: string) {
   if (!this.isShadow) throw new MemberNotShadowError("Cannot assign user.");
   this.user = _id;
   this.isShadow = false;
   this.isPublished = false;
   await this.save();
-};
+}
+MemberSchema.methods.assignUser = assignUser;
 
 /**
  * Unassign user to the database.
  * @throws MemberNotShadowError
  */
-MemberSchema.methods.unassignUser = async function assignUser(
-  this: MemberModel
-) {
+async function unassignUser(this: MemberModel) {
   if (this.isShadow) throw new MemberShadowError("Cannot unassign user.");
   this.user = undefined;
   this.isShadow = true;
   this.isPublished = false;
   await this.save();
-};
+}
+MemberSchema.methods.unassignUser = unassignUser;
 
 /**
  * Publish the shadow member url.
  * @throws MemberNotShadowError
  */
-MemberSchema.methods.publish = async function assignUser(this: MemberModel) {
+async function publish(this: MemberModel) {
   if (!this.isShadow) throw new MemberNotShadowError("Cannot publish member.");
   this.isPublished = true;
   await this.save();
-};
+}
+MemberSchema.methods.publish = publish;
 
 /**
  * Unpublish the shadow member url.
  * @throws MemberNotShadowError
  */
-MemberSchema.methods.unpublish = async function assignUser(this: MemberModel) {
+async function unpublish(this: MemberModel) {
   if (!this.isShadow) {
     throw new MemberNotShadowError("Cannot unpublish member.");
   }
   this.isPublished = false;
   await this.save();
-};
+}
+MemberSchema.methods.unpublish = unpublish;
