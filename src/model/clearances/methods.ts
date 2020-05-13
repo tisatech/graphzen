@@ -4,7 +4,12 @@ import { MemberModel, Member } from "../members";
 import { GroupModel } from "../groups";
 import { UserModel } from "../users";
 import { Clearance } from ".";
-import { ClearanceAlreadyAssignedError } from "../../lib/errors";
+import {
+  ClearanceAlreadyAssignedError,
+  RequirementNotFoundError,
+} from "../../lib/errors";
+import { RequirementModel, Requirement } from "../requirements";
+import { RequirementSchema } from "../requirements/schema";
 
 export interface ClearanceMethods {
   assignMember(member: MemberModel["_id"]): Promise<void>;
@@ -14,7 +19,8 @@ export interface ClearanceMethods {
     groupID: GroupModel["_id"]
   ): Promise<ClearanceModel>;
   apply(): Promise<void>;
-  //   addRequirement();
+  addRequirement(name: string): Promise<RequirementModel>;
+  removeRequirement(_id: string): Promise<void>;
 }
 
 /**
@@ -36,14 +42,16 @@ const assignMember: ClearanceMethods["assignMember"] = async function (
 
   // check if already part of a group.
   const groups = member.groups.map((x) => x.group.toString());
-  const isPartOfGroup = groups.some((groupID) => groups.includes(groupID));
+  const isPartOfGroup = groups.some((groupID) =>
+    this.assignedGroups.includes(groupID)
+  );
   if (isPartOfGroup)
     throw new ClearanceAlreadyAssignedError(
       "Can not assign clearance. Member is part of an assigned group."
     );
 
   this.assignedMembers.push(member._id.toString());
-  this.isModified = true;
+  this.isModifiedClearance = true;
   await this.save();
 };
 ClearanceSchema.methods.assignMember = assignMember;
@@ -57,7 +65,7 @@ const assignGroup: ClearanceMethods["assignGroup"] = async function (
   group: string
 ) {
   this.assignedGroups.push(group);
-  this.isModified = true;
+  this.isModifiedClearance = true;
   await this.save();
 };
 ClearanceSchema.methods.assignGroup = assignGroup;
@@ -93,13 +101,54 @@ ClearanceSchema.methods.fork = fork;
 /***
  * Propagate the changes in requirements/users/members.
  */
-const apply: ClearanceMethods["apply"] = async function (this: ClearanceModel) {
-  const members = await Member.find({
-    _id: { $in: this.assignedMembers },
-  }).exec();
-  const memberPromises = members.map(async (member) => {
-    // TODO for requirements.
+// const apply: ClearanceMethods["apply"] = async function (this: ClearanceModel) {
+//   const members = await Member.find({
+//     _id: { $in: this.assignedMembers },
+//   }).exec();
+//   const memberPromises = members.map(async (member) => {
+//     // TODO for requirements.
+//   });
+//   await Promise.all(memberPromises);
+// };
+// ClearanceSchema.methods.apply = apply;
+
+/**
+ * Add a requirement in the clearance.
+ * @param name - The name of the requirement.
+ */
+const addRequirement: ClearanceMethods["addRequirement"] = async function (
+  this: ClearanceModel,
+  name: string
+) {
+  const requirement = await Requirement.createRequirement({
+    name,
+    assignedMember: this.createdBy,
   });
-  await Promise.all(memberPromises);
+  await requirement.save();
+  this.requirements.push(requirement._id.toString());
+  await this.save();
+  return requirement;
 };
-ClearanceSchema.methods.apply = apply;
+RequirementSchema.methods.addRequirement = addRequirement;
+
+/**
+ * Remove requirement.
+ * @param _id - The _id of the requirement to be removed.
+ */
+const removeRequirement: ClearanceMethods["removeRequirement"] = async function (
+  this: ClearanceModel,
+  _id: string
+) {
+  const requirementIndex = this.requirements.indexOf(_id);
+  const requirementID = this.requirements[requirementIndex];
+
+  if (requirementIndex == -1)
+    throw new RequirementNotFoundError(
+      "Can not remove requirement in the clearance."
+    );
+
+  this.requirements.splice(requirementIndex, 1);
+  await this.save();
+  await Requirement.deleteRequirement(requirementID);
+};
+RequirementSchema.methods.removeRequirement = removeRequirement;

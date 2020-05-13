@@ -58,3 +58,31 @@ export class UserNotInRoot extends Error {
 export class ClearanceAlreadyAssignedError extends Error {
   name = "ClearanceAlreadyAssignedError";
 }
+
+/**
+ * Thrown when setting privacy of non-page approval.
+ */
+export class ItemTypeNotPageError extends Error {
+  name = "ItemTypeNotPageError";
+}
+
+/**
+ * Thrown when item is not found when accessing inside requirements.
+ */
+export class ItemNotFoundError extends Error {
+  name = "ItemTypeNotPageError";
+}
+
+/**
+ * Thrown when arrangement input is invalid.
+ */
+export class ItemArrangementInvalid extends Error {
+  name = "ItemArrangementInvalid";
+}
+
+/**
+ * Thrown when requirement is not found when accessing inside clearance.
+ */
+export class RequirementNotFoundError extends Error {
+  name = "RequirementNotFoundError";
+}
