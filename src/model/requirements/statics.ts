@@ -2,6 +2,7 @@ import { Model, Document } from "mongoose";
 import { RequirementSchema } from "./schema";
 import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
 import { RequirementMethods } from "./methods";
+import { Item } from "../items";
 
 interface RequirementModel
   extends RequirementSchema,
@@ -95,6 +96,12 @@ RequirementSchema.statics.updateRequirement = updateRequirement;
 async function deleteRequirement(this: RequirementEntity, _id: string) {
   const requirement = await this.findById(_id).exec();
   if (!requirement) throw new IDNotFoundError("Cannot delete requirement.");
+
+  const { items } = requirement;
+  const promises = items.map(async (itemID) => {
+    await Item.deleteItem(itemID);
+  });
+  await Promise.all(promises);
   await requirement.remove();
 }
 RequirementSchema.statics.deleteRequirement = deleteRequirement;

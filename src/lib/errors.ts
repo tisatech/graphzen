@@ -70,7 +70,7 @@ export class ItemTypeNotPageError extends Error {
  * Thrown when item is not found when accessing inside requirements.
  */
 export class ItemNotFoundError extends Error {
-  name = "ItemTypeNotPageError";
+  name = "ItemNotFoundError";
 }
 
 /**
@@ -85,4 +85,18 @@ export class ItemArrangementInvalid extends Error {
  */
 export class RequirementNotFoundError extends Error {
   name = "RequirementNotFoundError";
+}
+
+/**
+ * Thrown when item progress is not found when accessing inside requirement progress.
+ */
+export class ItemProgressNotFoundError extends Error {
+  name = "ItemProgressNotFoundError";
+}
+
+/**
+ * Thrown when requirement progress is not found when accessing inside clearance progress.
+ */
+export class RequirementProgressNotFoundError extends Error {
+  name = "RequirementProgressNotFoundError";
 }

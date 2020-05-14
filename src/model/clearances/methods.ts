@@ -10,6 +10,7 @@ import {
 } from "../../lib/errors";
 import { RequirementModel, Requirement } from "../requirements";
 import { RequirementSchema } from "../requirements/schema";
+import { ClearanceProgress } from "../clearanceProgress";
 
 export interface ClearanceMethods {
   assignMember(member: MemberModel["_id"]): Promise<void>;
@@ -101,16 +102,32 @@ ClearanceSchema.methods.fork = fork;
 /***
  * Propagate the changes in requirements/users/members.
  */
-// const apply: ClearanceMethods["apply"] = async function (this: ClearanceModel) {
-//   const members = await Member.find({
-//     _id: { $in: this.assignedMembers },
-//   }).exec();
-//   const memberPromises = members.map(async (member) => {
-//     // TODO for requirements.
-//   });
-//   await Promise.all(memberPromises);
-// };
-// ClearanceSchema.methods.apply = apply;
+const apply: ClearanceMethods["apply"] = async function (this: ClearanceModel) {
+  const membersFromGroup = (
+    await Member.find(
+      { "groups.group": { $in: this.assignedGroups } },
+      "_id"
+    ).exec()
+  ).map((x) => x._id.toString());
+
+  // const members = await Member.find({
+  //   _id: { $in: [...this.assignedMembers, membersFromGroup] },
+  // }).exec();
+
+  // proven to be without duplicate
+  const memberIDs = this.assignedMembers.concat(membersFromGroup);
+
+  // add new members
+  const memberPromises = memberIDs.map(async (member) => {
+    //check if member already have a clearance progress.
+    const clearance = await ClearanceProgress.find({ member }).exec();
+    if (clearance) {
+    } else {
+    }
+  });
+  await Promise.all(memberPromises);
+};
+ClearanceSchema.methods.apply = apply;
 
 /**
  * Add a requirement in the clearance.

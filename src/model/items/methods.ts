@@ -63,7 +63,7 @@ ItemSchema.methods.setApprovalClearance = setApprovalClearance;
  * Set the approval type of the item to a requirement.
  * @param requirements - The requirements needed for approval.
  */
-const setApprovalRequirement: ItemMethods["setApprovalClearance"] = async function (
+const setApprovalRequirement: ItemMethods["setApprovalRequirement"] = async function (
   this: ItemModel,
   requirements: RequirementModel[]
 ) {
