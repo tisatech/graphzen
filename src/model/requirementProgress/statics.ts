@@ -1,6 +1,6 @@
 import { Model, Document } from "mongoose";
 import { RequirementProgressSchema } from "./schema";
-import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
+import { IDNotFoundError } from "../../lib/errors";
 import { RequirementProgressMethods } from "./methods";
 import { ItemProgress } from "../itemProgress";
 
@@ -42,6 +42,7 @@ async function createRequirementProgress(
   requirementProgress.member = member;
   requirementProgress.parent = parent;
   requirementProgress.definition = definition;
+  requirementProgress.status = "ACTIVE";
   return await requirementProgress.save();
 }
 RequirementProgressSchema.statics.createRequirementProgress = createRequirementProgress;
@@ -65,7 +66,7 @@ async function getRequirementProgress(
 RequirementProgressSchema.statics.getRequirementProgress = getRequirementProgress;
 
 /**
- * Delete an RequirementProgress.
+ * Delete a RequirementProgress.
  * @param _id - ID of the RequirementProgress.
  *
  * @throws IDNotFoundError, GroupIDNotFoundError

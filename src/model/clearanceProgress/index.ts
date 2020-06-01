@@ -3,7 +3,6 @@ import { ClearanceProgressSchema } from "./schema";
 import { ClearanceProgressEntity, ClearanceProgressModel } from "./interfaces";
 import { ClearanceProgressStatics } from "./statics";
 
-import "./hook";
 import "./statics";
 import "./methods";
 

@@ -1,10 +1,11 @@
-import {
-  ClearanceProgressModel,
-  ClearanceProgressModelPopulated,
-} from "./interfaces";
+import { ClearanceProgressModel } from "./interfaces";
 import { ClearanceProgressSchema } from "./schema";
 import { StatusType } from "./schema";
 import { RequirementProgressNotFoundError } from "../../lib/errors";
+import {
+  RequirementProgress,
+  RequirementProgressModel,
+} from "../requirementProgress";
 
 export interface ClearanceProgressMethods {
   getStatus(): Promise<ClearanceProgressModel["status"]>;
@@ -17,23 +18,7 @@ export interface ClearanceProgressMethods {
 const getStatus: ClearanceProgressModel["getStatus"] = async function (
   this: ClearanceProgressModel
 ) {
-  if (this.done.length === this.requirements.length) return "CLEARED";
-
-  const requirements: ClearanceProgressModelPopulated["requirements"] = (
-    await this.populate("requirements").execPopulate()
-  ).requirements as any;
-
-  let status: "CLEARED" | "PENDING" | "ACTIVE" = "ACTIVE";
-  for (let requirement of requirements) {
-    const requirementStatus = await requirement.getStatus();
-    if (requirementStatus == "PENDING" || requirementStatus == "ACTIVE") {
-      status = requirementStatus;
-      break;
-    }
-  }
-  this.status = status;
-  await this.save();
-  return status;
+  return this.status;
 };
 ClearanceProgressSchema.methods.getStatus = getStatus;
 
@@ -47,31 +32,33 @@ const updateStatus: ClearanceProgressMethods["updateStatus"] = async function (
   requirementID: string,
   status: keyof StatusType
 ) {
-  const requirementIndex = this.requirements.indexOf(requirementID);
+  const requirementIndex = this.requirements
+    .map((x) => x.toString())
+    .indexOf(requirementID);
   if (requirementIndex == -1)
     throw new RequirementProgressNotFoundError("Can not update status.");
 
   // Process done array.
   if (status != "CLEARED") {
-    const doneIndex = this.done.indexOf(requirementID);
+    const doneIndex = this.done.map((x) => x.toString()).indexOf(requirementID);
     if (doneIndex != -1) this.done.splice(doneIndex, 1);
   } else {
-    const doneIndex = this.done.indexOf(requirementID);
+    const doneIndex = this.done.map((x) => x.toString()).indexOf(requirementID);
     if (doneIndex == -1) this.done.push(requirementID);
   }
 
   // Process new status
-  const requirements: ClearanceProgressModelPopulated["requirements"] = (
-    await this.populate("requirements").execPopulate()
-  ).requirements as any;
+  const requirements: RequirementProgressModel[] = await RequirementProgress.find(
+    { _id: { $in: this.requirements } }
+  ).exec();
 
   status = "CLEARED";
-  for (let requirement of requirements) {
+  for (const requirement of requirements) {
     const requirementStatus = requirement.getStatus();
-    if (requirementStatus != "CLEARED") {
+    if (requirementStatus != "CLEARED" && status == "CLEARED")
       status = requirementStatus;
-      break;
-    }
+    else if (requirementStatus == "ACTIVE" && status == "PENDING")
+      status = requirementStatus;
   }
   this.status = status;
   await this.save();

@@ -6,7 +6,6 @@ import {
 } from "./interfaces";
 import { RequirementProgressStatics } from "./statics";
 
-import "./hook";
 import "./statics";
 import "./methods";
 

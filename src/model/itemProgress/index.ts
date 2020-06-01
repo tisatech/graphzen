@@ -3,7 +3,6 @@ import { ItemProgressSchema } from "./schema";
 import { ItemProgressEntity, ItemProgressModel } from "./interfaces";
 import { ItemProgressStatics } from "./statics";
 
-import "./hook";
 import "./statics";
 import "./methods";
 

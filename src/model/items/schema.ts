@@ -1,6 +1,5 @@
 import { Schema } from "mongoose";
 import { MemberModel } from "../members";
-import { User } from "../users";
 import { RequirementModel } from "../requirements";
 import { ClearanceModel } from "../clearances";
 
@@ -53,8 +52,8 @@ export const ItemSchema = new Schema({
   },
 
   members: [{ type: Schema.Types.ObjectId, ref: "Member" }],
-  clearancens: [{ type: Schema.Types.ObjectId, ref: "Clearance" }],
-  requiements: [{ type: Schema.Types.ObjectId, ref: "Requirement" }],
+  clearances: [{ type: Schema.Types.ObjectId, ref: "Clearance" }],
+  requirements: [{ type: Schema.Types.ObjectId, ref: "Requirement" }],
 
   assignedMember: { type: Schema.Types.ObjectId, ref: "Member" },
 });

@@ -58,6 +58,12 @@ export class UserNotInRoot extends Error {
 export class ClearanceAlreadyAssignedError extends Error {
   name = "ClearanceAlreadyAssignedError";
 }
+/**
+ * Thrown when removing nonexistent member in clearance.
+ */
+export class ClearanceNotAssignedError extends Error {
+  name = "ClearanceNotAssignedError";
+}
 
 /**
  * Thrown when setting privacy of non-page approval.
@@ -99,4 +105,25 @@ export class ItemProgressNotFoundError extends Error {
  */
 export class RequirementProgressNotFoundError extends Error {
   name = "RequirementProgressNotFoundError";
+}
+
+/**
+ * Thrown when clearance progress is not found when accessing inside clearance progress.
+ */
+export class ClearanceProgressNotFoundError extends Error {
+  name = "ClearanceProgressNotFoundError";
+}
+
+/**
+ * Thrown when member trying to be removed is part of a group.
+ */
+export class MemberPartOfGroupError extends Error {
+  name = "MemberPartOfGroupError";
+}
+
+/**
+ * Thrown when group is being removed from clearance.
+ */
+export class GroupNotAssignedInClearanceError extends Error {
+  name = "GroupNotAssignedInClearanceError";
 }

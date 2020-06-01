@@ -1,7 +1,6 @@
 import { ItemProgressSchema } from "./schema";
 import { ItemProgressModel } from ".";
 import { RequirementProgress } from "../requirementProgress";
-import { ClearanceProgress } from "../clearanceProgress";
 
 export interface ItemProgressMethods {
   setStatus(status: ItemProgressModel["status"]): Promise<void>;
@@ -20,8 +19,8 @@ const setStatus: ItemProgressMethods["setStatus"] = async function (
   const requirementProgress = await RequirementProgress.getRequirementProgress(
     this.parent
   );
-  await requirementProgress.updateStatus(this._id.toString(), status);
   await this.save();
+  await requirementProgress.updateStatus(this._id.toString(), status);
 };
 ItemProgressSchema.methods.setStatus = setStatus;
 

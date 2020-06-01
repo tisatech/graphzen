@@ -35,6 +35,7 @@ const setApprovalStaff: ItemMethods["setApprovalStaff"] = async function (
 ) {
   this.approvalType = "STAFF";
   this.approval = undefined;
+  delete this.approval;
   this.members = [this.assignedMember];
   this.clearances = [];
   this.requirements = [];
@@ -52,6 +53,7 @@ const setApprovalClearance: ItemMethods["setApprovalClearance"] = async function
 ) {
   this.approvalType = "CLEARANCE";
   this.approval = undefined;
+  delete this.approval;
   this.members = [];
   this.clearances = clearances.map((x) => x._id.toString());
   this.requirements = [];
@@ -69,6 +71,7 @@ const setApprovalRequirement: ItemMethods["setApprovalRequirement"] = async func
 ) {
   this.approvalType = "REQUIREMENT";
   this.approval = undefined;
+  delete this.approval;
   this.members = [];
   this.clearances = [];
   this.requirements = requirements.map((x) => x._id.toString());
@@ -113,6 +116,7 @@ const setApprovalPage: ItemMethods["setApprovalPage"] = async function (
     taskOnly: false,
   };
   this.members = [];
+  this.requirements = [];
   this.clearances = [];
   await this.save();
 };

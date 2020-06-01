@@ -1,6 +1,6 @@
 import { Model, Document } from "mongoose";
 import { ItemProgressSchema } from "./schema";
-import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
+import { IDNotFoundError } from "../../lib/errors";
 import { ItemProgressMethods } from "./methods";
 
 interface ItemProgressModel

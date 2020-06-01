@@ -1,8 +1,9 @@
 import { Model, Document } from "mongoose";
 import { RequirementSchema } from "./schema";
-import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
+import { IDNotFoundError } from "../../lib/errors";
 import { RequirementMethods } from "./methods";
 import { Item } from "../items";
+import { RequirementProgress } from "../requirementProgress";
 
 interface RequirementModel
   extends RequirementSchema,
@@ -50,7 +51,8 @@ async function createRequirement(
   const { name, assignedMember } = payload;
   requirement.name = name;
   requirement.assignedMember = assignedMember;
-  return await requirement.save();
+  await requirement.save();
+  return requirement;
 }
 RequirementSchema.statics.createRequirement = createRequirement;
 
@@ -102,6 +104,9 @@ async function deleteRequirement(this: RequirementEntity, _id: string) {
     await Item.deleteItem(itemID);
   });
   await Promise.all(promises);
+  await RequirementProgress.deleteMany({
+    definition: requirement._id.toString(),
+  }).exec();
   await requirement.remove();
 }
 RequirementSchema.statics.deleteRequirement = deleteRequirement;

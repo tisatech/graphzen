@@ -1,9 +1,7 @@
 import { Model, Document } from "mongoose";
 import { ClearanceProgressSchema } from "./schema";
-import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
+import { IDNotFoundError } from "../../lib/errors";
 import { ClearanceProgressMethods } from "./methods";
-import { ItemProgress } from "../itemProgress";
-import { Clearance } from "../clearances";
 import { RequirementProgress } from "../requirementProgress";
 
 interface ClearanceProgressModel
@@ -42,6 +40,7 @@ async function createClearanceProgress(
   const { member, definition } = payload;
   clearanceProgress.member = member;
   clearanceProgress.definition = definition;
+  clearanceProgress.status = "ACTIVE";
   return await clearanceProgress.save();
 }
 ClearanceProgressSchema.statics.createClearanceProgress = createClearanceProgress;

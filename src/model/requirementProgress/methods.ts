@@ -1,11 +1,10 @@
-import {
-  RequirementProgressModel,
-  RequirementProgressModelPopulated,
-} from "./interfaces";
+import { RequirementProgressModel } from "./interfaces";
 import { RequirementProgressSchema } from "./schema";
 import { StatusType } from "../itemProgress/schema";
 import { ItemProgressNotFoundError } from "../../lib/errors";
 import { ClearanceProgress } from "../clearanceProgress";
+import { ItemProgressModel } from "..";
+import { ItemProgress } from "../itemProgress";
 
 export interface RequirementProgressMethods {
   getStatus(): RequirementProgressModel["status"];
@@ -24,34 +23,34 @@ RequirementProgressSchema.methods.getStatus = getStatus;
 
 /**
  * Updates the state of the requirement progress from the changes in its items.
- * @param itemID - The ID of the item.
+ * @param itemProgressID - The ID of the item.
  * @param status - The new status of the item.
  */
 const updateStatus: RequirementProgressMethods["updateStatus"] = async function (
   this: RequirementProgressModel,
-  itemID: string,
+  itemProgressID: string,
   status: keyof StatusType
 ) {
-  const itemIndex = this.items.indexOf(itemID);
+  const itemIndex = this.items.map((x) => x.toString()).indexOf(itemProgressID);
   if (itemIndex == -1)
     throw new ItemProgressNotFoundError("Can not update status.");
 
   // Process done array.
   if (status != "CLEARED") {
-    const doneIndex = this.done.indexOf(itemID);
+    const doneIndex = this.done.indexOf(itemProgressID);
     if (doneIndex != -1) this.done.splice(doneIndex, 1);
   } else {
-    const doneIndex = this.done.indexOf(itemID);
-    if (doneIndex == -1) this.done.push(itemID);
+    const doneIndex = this.done.indexOf(itemProgressID);
+    if (doneIndex == -1) this.done.push(itemProgressID);
   }
 
   // Process new status
-  const items: RequirementProgressModelPopulated["items"] = (
-    await this.populate("items").execPopulate()
-  ).items as any;
+  const items: ItemProgressModel[] = await ItemProgress.find({
+    _id: { $in: this.items },
+  }).exec();
 
   status = "CLEARED";
-  for (let item of items) {
+  for (const item of items) {
     const itemStatus = item.getStatus();
     if (itemStatus != "CLEARED") {
       status = itemStatus;

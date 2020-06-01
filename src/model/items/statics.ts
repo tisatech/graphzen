@@ -1,7 +1,8 @@
 import { Model, Document } from "mongoose";
 import { ItemSchema } from "./schema";
-import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
+import { IDNotFoundError } from "../../lib/errors";
 import { ItemMethods } from "./methods";
+import { ItemProgress } from "../itemProgress";
 
 interface ItemModel extends ItemSchema, Document, ItemMethods {}
 interface ItemEntity extends ItemStatics, Model<ItemModel> {}
@@ -90,6 +91,7 @@ ItemSchema.statics.updateItem = updateItem;
 async function deleteItem(this: ItemEntity, _id: string) {
   const item = await this.findById(_id).exec();
   if (!item) throw new IDNotFoundError("Cannot delete item.");
+  await ItemProgress.deleteMany({ definition: item._id.toString() }).exec();
   await item.remove();
 }
 ItemSchema.statics.deleteItem = deleteItem;

@@ -1,9 +1,10 @@
-import { Model, Document } from "mongoose";
 import { ClearanceSchema } from "./schema";
-import { IDNotFoundError, GroupIDNotFoundError } from "../../lib/errors";
+import { IDNotFoundError } from "../../lib/errors";
 import { ClearanceModel } from ".";
 import { UserModel } from "../users";
 import { ClearanceEntity } from "./interfaces";
+import { Requirement } from "../requirements";
+import { ClearanceProgress } from "../clearanceProgress";
 
 export interface ClearanceStatics {
   createClearance: (payload: NewClearancePayload) => Promise<ClearanceModel>;
@@ -52,7 +53,7 @@ const createClearance: ClearanceStatics["createClearance"] = async function (
   clearance.description = description;
   clearance.scope_group = scope_group;
   clearance.createdBy = createdBy;
-  clearance.isModified = false;
+  clearance.isModifiedClearance = false;
   return await clearance.save();
 };
 ClearanceSchema.statics.createClearance = createClearance;
@@ -107,9 +108,13 @@ const deleteClearance: ClearanceStatics["deleteClearance"] = async function (
   const clearance = await this.findById(_id).exec();
   if (!clearance) throw new IDNotFoundError("Cannot delete clearance.");
 
-  // TODO - delete requirements.
-  // TODO - delete progress.
-
+  const promises = clearance.requirements.map(async (requirementID) => {
+    await Requirement.deleteRequirement(requirementID.toString());
+  });
+  await Promise.all(promises);
+  await ClearanceProgress.deleteMany({
+    definition: clearance._id.toString(),
+  }).exec();
   await clearance.remove();
 };
 ClearanceSchema.statics.deleteClearance = deleteClearance;
