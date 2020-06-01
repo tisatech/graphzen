@@ -10,6 +10,20 @@ import {
 } from "../../lib/errors";
 import { Group, GroupModel } from ".";
 import { GroupEntity } from "./interfaces";
+import { ClearanceModel, Clearance } from "../clearances";
+import { NewClearancePayload } from "../clearances/statics";
+
+/**
+ * Interface payload for creating new Clearance by Group
+ */
+export interface NewClearanceGroupPayload {
+  /** The title of the clearance. */
+  name: NewClearancePayload["name"];
+  /** The description of the clearance. */
+  description: NewClearancePayload["description"];
+  /** The user created the clearance. */
+  createdBy: UserModel["_id"];
+}
 
 /**
  * Interface for the methods of Group documents.
@@ -22,6 +36,8 @@ export interface GroupMethods {
   removeGroup: (_id: GroupModel["_id"]) => Promise<void>;
   forkAsChild: (createdBy: UserModel["_id"]) => Promise<GroupModel>;
   forkAsSibling: (createdBy: UserModel["_id"]) => Promise<GroupModel>;
+
+  addClearance(payload: NewClearanceGroupPayload): Promise<ClearanceModel>;
 }
 
 /**
@@ -275,3 +291,21 @@ async function forkAsSibling(this: GroupModel, createdBy: UserModel["_id"]) {
   return group;
 }
 GroupSchema.methods.forkAsSibling = forkAsSibling;
+
+/**
+ * Add a new Clearance in this group.
+ * @returns the newly created clearance
+ */
+const addClearance: GroupMethods["addClearance"] = async function addClearance(
+  this: GroupModel,
+  payload: NewClearanceGroupPayload
+) {
+  const clearance = await Clearance.createClearance({
+    ...payload,
+    scope_group: this._id.toString(),
+  });
+  this.clearances.push(clearance._id.toString());
+  await this.save();
+  return clearance;
+};
+GroupSchema.methods.addClearance = addClearance;

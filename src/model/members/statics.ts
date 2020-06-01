@@ -69,10 +69,7 @@ async function removeMembersGroup(baseGroup: GroupModel, _id: string) {
  * @param payload.customID - The customId of the Member.
  * @return The nelwy created member.
  */
-MemberSchema.statics.createMember = async function createMember(
-  this: MemberEntity,
-  payload: NewMemberPayload
-) {
+async function createMember(this: MemberEntity, payload: NewMemberPayload) {
   const member = new this();
   const { scope_group, nickname, customID } = payload;
 
@@ -86,7 +83,8 @@ MemberSchema.statics.createMember = async function createMember(
   member.isShadow = true;
 
   return await member.save();
-};
+}
+MemberSchema.statics.createMember = createMember;
 
 /**
  * Get Member
@@ -95,14 +93,12 @@ MemberSchema.statics.createMember = async function createMember(
  * @return The requested member.
  * @throws IDNotFoundError
  */
-MemberSchema.statics.getMember = async function getMember(
-  this: MemberEntity,
-  _id: string
-) {
+async function getMember(this: MemberEntity, _id: string) {
   const member = await this.findById(_id).exec();
   if (!member) throw new IDNotFoundError("Cannot get member.");
   return member;
-};
+}
+MemberSchema.statics.getMember = getMember;
 
 /**
  * Update a Member
@@ -113,7 +109,7 @@ MemberSchema.statics.getMember = async function getMember(
  *
  * @throws IDNotFoundError, GroupIDNotFoundError
  */
-MemberSchema.statics.updateMember = async function updateMember(
+async function updateMember(
   this: MemberEntity,
   _id: string,
   payload: UpdateMemberPayload
@@ -132,7 +128,8 @@ MemberSchema.statics.updateMember = async function updateMember(
   selectedGroup.customID = customID;
 
   await member.save();
-};
+}
+MemberSchema.statics.updateMember = updateMember;
 
 /**
  * Disconnects a member from a certain group. If the member is deleted from the scope, it will be removed from the database.
@@ -141,11 +138,7 @@ MemberSchema.statics.updateMember = async function updateMember(
  *
  * @throws IDNotFoundError, GroupIDNotFoundError
  */
-MemberSchema.statics.deleteMember = async function deleteMember(
-  this: MemberEntity,
-  _id: string,
-  groupID: string
-) {
+async function deleteMember(this: MemberEntity, _id: string, groupID: string) {
   const member = await this.findById(_id).exec();
   if (!member) throw new IDNotFoundError("Cannot delete member.");
 
@@ -175,4 +168,5 @@ MemberSchema.statics.deleteMember = async function deleteMember(
 
   if (member.scope_group.toString() == groupID) await member.remove();
   else await member.save();
-};
+}
+MemberSchema.statics.deleteMember = deleteMember;

@@ -1,8 +1,3 @@
-/**
- * @packageDocumentation
- * @module Member
- */
-
 import { model, Model } from "mongoose";
 import { MemberSchema } from "./schema";
 import { MemberEntity, MemberModel } from "./interfaces";
